@@ -3,8 +3,12 @@
 import importlib
 from typing import List, Dict, Any, Optional
 
+import typer
+
 from boxup.utils.logger import info, success, warn, error
 from boxup.state import is_module_installed, mark_module_failed
+
+app = typer.Typer(help="Boxup - Terminal Development Environment Bootstrap")
 
 
 # Module execution order
@@ -102,3 +106,33 @@ def uninstall_boxup(restore: bool = False, force: bool = False) -> None:
     """Uninstall all boxup components."""
     from boxup.modules.uninstall import uninstall_boxup as do_uninstall
     do_uninstall(restore=restore, force=force)
+
+
+@app.command()
+def main(
+    modules: List[str] = typer.Argument(None, help="Modules to run (default: all)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without applying"),
+    force: bool = typer.Option(False, "--force", help="Force re-installation"),
+    verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output"),
+    uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall boxup"),
+    restore: bool = typer.Option(False, "--restore", help="Restore backups during uninstall"),
+) -> None:
+    """Boxup - Terminal Development Environment Bootstrap"""
+    if uninstall:
+        uninstall_boxup(restore=restore, force=force)
+        return
+    
+    if dry_run:
+        info("Dry run mode - no changes will be made")
+    
+    results = run_modules(modules=modules if modules else None, force=force)
+    
+    # Print summary
+    success_count = sum(1 for r in results.values() if r.get("status") == "success")
+    failed_count = sum(1 for r in results.values() if r.get("status") == "failed")
+    
+    info(f"\nSummary: {success_count} succeeded, {failed_count} failed")
+
+
+if __name__ == "__main__":
+    app()

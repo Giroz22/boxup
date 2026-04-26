@@ -69,31 +69,49 @@ def install_docker(force: bool = False) -> dict:
     """Install Docker CE from official repository."""
     try:
         info("Installing Docker CE...")
-        
+
+        # Detect OS
+        os_release = {}
+        if os.path.exists("/etc/os-release"):
+            with open("/etc/os-release") as f:
+                for line in f:
+                    if "=" in line:
+                        key, val = line.strip().split("=", 1)
+                        os_release[key] = val.strip('"')
+
+        distro_id = os_release.get("ID", "")
+        distro_version = os_release.get("VERSION_ID", "")
+        is_debian = distro_id in ("debian", "pop", "linuxmint")
+        is_ubuntu = distro_id == "ubuntu"
+
         # Add Docker's official GPG key
         subprocess.run(
             ["sudo", "apt", "update"],
             check=True,
             capture_output=True,
         )
-        
+
         # Install prerequisites
         subprocess.run(
             ["sudo", "apt", "install", "-y", "ca-certificates", "curl", "gnupg"],
             check=True,
             capture_output=True,
         )
-        
+
         # Add Docker GPG key
         subprocess.run(
             ["sudo", "install", "-m", "0755", "-d", "/etc/apt/keyrings"],
             check=True,
             capture_output=True,
         )
+
+        # Use Ubuntu repo for both Ubuntu and Debian-based systems
+        # Docker's Ubuntu repo works on Debian since they share base structure
+        gpg_url = "https://download.docker.com/linux/ubuntu/gpg"
+        repo_url = "https://download.docker.com/linux/ubuntu"
+
         subprocess.run(
-            ["sudo", "curl", "-fsSL",
-             "https://download.docker.com/linux/ubuntu/gpg",
-             "-o", "/etc/apt/keyrings/docker.asc"],
+            ["sudo", "curl", "-fsSL", gpg_url, "-o", "/etc/apt/keyrings/docker.asc"],
             check=True,
             capture_output=True,
         )
@@ -102,29 +120,45 @@ def install_docker(force: bool = False) -> dict:
             check=True,
             capture_output=True,
         )
-        
-        # Add Docker repository
-        distro = subprocess.run(
-            ["lsb_release", "-cs"],
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        
-        with open("/etc/apt/sources.list.d/docker.list", "w") as f:
-            f.write(f"deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {distro} stable\n")
-        
-        # Install Docker
-        subprocess.run(
-            ["sudo", "apt", "update"],
-            check=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["sudo", "apt", "install", "-y", "docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"],
-            check=True,
-            capture_output=True,
-        )
-        
+
+        # For Debian, use Debian repo if available, otherwise skip with warning
+        if is_debian:
+            # Try to use Debian's docker.io package instead (simpler, guaranteed to work)
+            info("Debian detected, using docker.io from Debian repos...")
+            subprocess.run(
+                ["sudo", "apt", "install", "-y", "docker.io", "docker-compose"],
+                check=True,
+                capture_output=True,
+            )
+        else:
+            # Ubuntu path - use official Docker repo
+            # Map Ubuntu codenames to stable (Docker supports these)
+            distro_codename = subprocess.run(
+                ["lsb_release", "-cs"],
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+
+            # Docker repo uses 'stable' not specific codenames for newer releases
+            docker_distro = "jammy"  # Default to Ubuntu 22.04
+            if distro_codename in ("focal", "jammy", "noble"):
+                docker_distro = distro_codename
+
+            with open("/etc/apt/sources.list.d/docker.list", "w") as f:
+                f.write(f"deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] {repo_url} {docker_distro} stable\n")
+
+            # Install Docker
+            subprocess.run(
+                ["sudo", "apt", "update"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["sudo", "apt", "install", "-y", "docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"],
+                check=True,
+                capture_output=True,
+            )
+
         # Add current user to docker group
         current_user = os.getenv("USER")
         subprocess.run(
@@ -132,9 +166,9 @@ def install_docker(force: bool = False) -> dict:
             check=True,
             capture_output=True,
         )
-        
+
         return {"status": "success"}
-        
+
     except subprocess.CalledProcessError as e:
         error(f"Docker installation failed: {e}")
         return {"status": "failed", "error": str(e)}

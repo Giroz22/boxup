@@ -16,6 +16,7 @@ fi
 
 BOXUP_DIR="${HOME}/.local/boxup"
 BOXUP_VENV="${BOXUP_DIR}/venv"
+BOXUP_BIN="${BOXUP_VENV}/bin"
 
 echo "[INFO] Boxup bootstrap starting..."
 
@@ -38,51 +39,39 @@ fi
 
 echo "[OK] Python $PYTHON_VERSION detected"
 
-# Try to create venv
-if ! python3 -m venv "$BOXUP_VENV" 2>/dev/null; then
-    echo "[WARN] python3-venv not available, trying pip --user..."
-    
-    # Check if we can use pip --user
-    if python3 -m pip --version &>/dev/null; then
-        echo "[INFO] Using pip --user mode..."
-        python3 -m pip install --user --upgrade pip -q
-        python3 -m pip install --user -e . -q
-        
-        # Create wrapper script
-        WRAPPER="${HOME}/.local/bin/boxup"
-        mkdir -p "${HOME}/.local/bin"
-        cat > "$WRAPPER" << 'WRAPPER_EOF'
-#!/bin/bash
-exec python3 -m boxup "$@"
-WRAPPER_EOF
-        chmod +x "$WRAPPER"
-        
-        echo "[INFO] Launching boxup..."
-        exec "$WRAPPER" "$@"
-    else
-        echo "[ERR] Neither venv nor pip available."
-        echo ""
-        echo "To fix, install python3-venv with sudo:"
-        echo "    sudo apt install python3-venv"
-        echo ""
-        echo "Or if pip is missing:"
-        echo "    sudo apt install python3-pip"
-        exit 1
+# Remove old venv if it exists and is not working
+if [ -d "$BOXUP_VENV" ]; then
+    if [ ! -f "${BOXUP_BIN}/pip" ] || [ ! -f "${BOXUP_BIN}/python3" ]; then
+        echo "[INFO] Removing corrupted venv..."
+        rm -rf "$BOXUP_VENV"
     fi
+fi
+
+# Create boxup directory and venv if needed
+if [ ! -d "$BOXUP_VENV" ]; then
+    echo "[INFO] Creating boxup environment..."
+    mkdir -p "$BOXUP_DIR"
+    python3 -m venv "$BOXUP_VENV"
 fi
 
 # Activate venv and install boxup
 echo "[INFO] Installing boxup..."
-source "${BOXUP_VENV}/bin/activate"
-pip install --upgrade pip -q
-pip install -e . -q
+source "${BOXUP_BIN}/activate"
+
+# Upgrade pip first
+"${BOXUP_BIN}/pip" install --upgrade pip
+
+# Install boxup in regular mode (not editable, more reliable)
+"${BOXUP_BIN}/pip" install .
 
 # Create wrapper script
 WRAPPER="${HOME}/.local/bin/boxup"
 mkdir -p "${HOME}/.local/bin"
 cat > "$WRAPPER" << 'WRAPPER_EOF'
 #!/bin/bash
-source "${HOME}/.local/boxup/venv/bin/activate"
+if [ -f "${HOME}/.local/boxup/venv/bin/activate" ]; then
+    source "${HOME}/.local/boxup/venv/bin/activate"
+fi
 exec python3 -m boxup "$@"
 WRAPPER_EOF
 chmod +x "$WRAPPER"

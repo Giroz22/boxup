@@ -27,7 +27,7 @@ echo "[OK] Python $PYTHON_VERSION detected"
 
 # Install boxup package in development mode
 echo "[INFO] Installing boxup..."
-pip install -e . --quiet
+python3 -m pip install -e . --quiet
 
 # Run boxup
 echo "[INFO] Launching boxup..."

@@ -12,14 +12,29 @@ if ! command -v python3 &> /dev/null; then
     sudo apt update
     sudo apt install -y python3 python3-pip
 elif ! python3 -m pip --version &> /dev/null; then
-    echo "[INFO] pip not found, trying get-pip.py..."
-    if command -v curl &> /dev/null; then
-        curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-        python3 /tmp/get-pip.py --user
+    echo "[INFO] pip not found, installing..."
+    
+    # Try wget first (more available), then curl
+    GET_PIP_URL="https://bootstrap.pypa.io/get-pip.py"
+    PIP_SCRIPT="/tmp/get-pip.py"
+    
+    if command -v wget &> /dev/null; then
+        wget -q "$GET_PIP_URL" -O "$PIP_SCRIPT" 2>/dev/null || {
+            echo "[ERR] Failed to download get-pip.py"
+            exit 1
+        }
+    elif command -v curl &> /dev/null; then
+        curl -fsSL "$GET_PIP_URL" -o "$PIP_SCRIPT" || {
+            echo "[ERR] Failed to download get-pip.py"
+            exit 1
+        }
     else
-        echo "[ERR] curl not found and pip is missing. Cannot proceed."
+        echo "[ERR] Neither wget nor curl found. Cannot install pip."
         exit 1
     fi
+    
+    python3 "$PIP_SCRIPT" --user
+    rm -f "$PIP_SCRIPT"
 fi
 
 # Verify python3 version >= 3.10

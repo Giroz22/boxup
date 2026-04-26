@@ -14,27 +14,27 @@ if ! command -v python3 &> /dev/null; then
 elif ! python3 -m pip --version &> /dev/null; then
     echo "[INFO] pip not found, installing..."
     
-    # Try wget first (more available), then curl
     GET_PIP_URL="https://bootstrap.pypa.io/get-pip.py"
     PIP_SCRIPT="/tmp/get-pip.py"
+    DOWNLOADED=false
     
+    # Try wget first, then curl
     if command -v wget &> /dev/null; then
-        wget -q "$GET_PIP_URL" -O "$PIP_SCRIPT" 2>/dev/null || {
-            echo "[ERR] Failed to download get-pip.py"
-            exit 1
-        }
+        wget "$GET_PIP_URL" -O "$PIP_SCRIPT" && DOWNLOADED=true
     elif command -v curl &> /dev/null; then
-        curl -fsSL "$GET_PIP_URL" -o "$PIP_SCRIPT" || {
-            echo "[ERR] Failed to download get-pip.py"
-            exit 1
-        }
+        curl -fsSL "$GET_PIP_URL" -o "$PIP_SCRIPT" && DOWNLOADED=true
     else
         echo "[ERR] Neither wget nor curl found. Cannot install pip."
         exit 1
     fi
     
-    python3 "$PIP_SCRIPT" --user
-    rm -f "$PIP_SCRIPT"
+    if [ "$DOWNLOADED" = true ] && [ -f "$PIP_SCRIPT" ] && [ -s "$PIP_SCRIPT" ]; then
+        echo "[INFO] Running get-pip.py..."
+        python3 "$PIP_SCRIPT" --user && rm -f "$PIP_SCRIPT"
+    else
+        echo "[ERR] Failed to download get-pip.py"
+        exit 1
+    fi
 fi
 
 # Verify python3 version >= 3.10

@@ -1,0 +1,34 @@
+set -g mouse on
+set -g status-position top
+
+# Colores base (misma paleta que p10k)
+set -g status-style "bg=black,fg=white"
+
+# Ventana activa: azul (igual que DIR_BACKGROUND=4 en p10k)
+set -g window-status-current-style "bg=colour4,fg=colour254,bold"
+set -g window-status-current-format " #I:#W "
+
+# Ventanas inactivas
+set -g window-status-style "bg=black,fg=colour250"
+set -g window-status-format " #I:#W "
+
+# Panel izquierdo: session name (fondo negro, texto gris claro como OS icon)
+set -g status-left-style "bg=colour7,fg=colour232,bold"
+set -g status-left " #S "
+
+# Panel derecho: métricas del sistema
+set -g status-right-length 80
+set -g status-right "#[bg=colour238,fg=colour250] CPU: #{cpu_percentage} #[bg=colour4,fg=colour254,bold] RAM: #{ram_percentage} "
+
+# Actualizar cada 2 segundos
+set -g status-interval 2
+
+# Plugins
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-cpu'
+
+run '~/.tmux/plugins/tpm/tpm'
+
+# Bordes de paneles
+set -g pane-border-style "fg=colour238"
+set -g pane-active-border-style "fg=colour4"

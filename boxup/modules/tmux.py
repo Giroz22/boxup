@@ -120,7 +120,7 @@ set -g status-left " #S "
 
 # Right panel: system metrics
 set -g status-right-length 80
-set -g status-right "#[bg=colour238,fg=colour250] CPU: #{cpu_percentage} #[bg=colour4,fg=colour254,bold] RAM: #{ram_percentage} "
+set -g status-right "#[bg=colour238,fg=colour250] CPU: #{{cpu_percentage}} #[bg=colour4,fg=colour254,bold] RAM: #{{ram_percentage}} "
 
 # Update every 2 seconds
 set -g status-interval 2

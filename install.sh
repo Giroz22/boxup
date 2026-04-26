@@ -12,12 +12,14 @@ if ! command -v python3 &> /dev/null; then
     sudo apt update
     sudo apt install -y python3 python3-pip
 elif ! python3 -m pip --version &> /dev/null; then
-    echo "[INFO] pip not found, trying ensurepip..."
-    python3 -m ensurepip --upgrade 2>/dev/null || {
-        echo "[INFO] ensurepip failed, trying apt..."
-        sudo apt update
-        sudo apt install -y python3-pip
-    }
+    echo "[INFO] pip not found, trying get-pip.py..."
+    if command -v curl &> /dev/null; then
+        curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+        python3 /tmp/get-pip.py --user
+    else
+        echo "[ERR] curl not found and pip is missing. Cannot proceed."
+        exit 1
+    fi
 fi
 
 # Verify python3 version >= 3.10

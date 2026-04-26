@@ -47,6 +47,12 @@ if [ -d "$BOXUP_VENV" ]; then
     fi
 fi
 
+# Remove old build artifacts (from previous failed installs as root)
+if [ -d "boxup.egg-info" ]; then
+    echo "[INFO] Removing old build artifacts..."
+    rm -rf boxup.egg-info build dist
+fi
+
 # Create boxup directory and venv if needed
 if [ ! -d "$BOXUP_VENV" ]; then
     echo "[INFO] Creating boxup environment..."

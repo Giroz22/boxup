@@ -68,6 +68,16 @@ def install(force: bool = False) -> bool:
 def install_docker(force: bool = False) -> dict:
     """Install Docker CE from official repository."""
     try:
+        # Check if docker is already installed
+        result = subprocess.run(
+            ["docker", "--version"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and not force:
+            info(f"Docker already installed: {result.stdout.strip()}")
+            return {"status": "success"}
+
         info("Installing Docker CE...")
 
         # Detect OS
@@ -123,10 +133,10 @@ def install_docker(force: bool = False) -> dict:
 
         # For Debian, use Debian repo if available, otherwise skip with warning
         if is_debian:
-            # Try to use Debian's docker.io package instead (simpler, guaranteed to work)
+            # Use Debian's docker.io package (docker-compose-plugin is included)
             info("Debian detected, using docker.io from Debian repos...")
             subprocess.run(
-                ["sudo", "apt", "install", "-y", "docker.io", "docker-compose"],
+                ["sudo", "apt", "install", "-y", "docker.io"],
                 check=True,
                 capture_output=True,
             )

@@ -12,9 +12,12 @@ if ! command -v python3 &> /dev/null; then
     sudo apt update
     sudo apt install -y python3 python3-pip
 elif ! python3 -m pip --version &> /dev/null; then
-    echo "[INFO] pip not found, installing..."
-    sudo apt update
-    sudo apt install -y python3-pip
+    echo "[INFO] pip not found, trying ensurepip..."
+    python3 -m ensurepip --upgrade 2>/dev/null || {
+        echo "[INFO] ensurepip failed, trying apt..."
+        sudo apt update
+        sudo apt install -y python3-pip
+    }
 fi
 
 # Verify python3 version >= 3.10

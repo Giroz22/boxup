@@ -308,35 +308,58 @@ def install_gentle_ai(force: bool = False) -> dict:
     """Install gentle-ai from GitHub."""
     try:
         info("Installing gentle-ai...")
-        
-        # Check if already installed
-        gentle_ai_path = Path.home() / ".local" / "bin" / "gentle-ai"
-        if gentle_ai_path.exists() and not force:
-            info("gentle-ai already installed, skipping download")
-            return {"status": "success", "reason": "already installed"}
-        
+
+        # Check if already installed (try multiple possible locations)
+        possible_paths = [
+            Path.home() / ".local" / "bin" / "gentle-ai",
+            Path.home() / ".local" / "bin" / "gentle-ai.exe",  # Windows fallback
+            Path.home() / "bin" / "gentle-ai",
+            Path.home() / ".gentle-ai" / "bin" / "gentle-ai",
+        ]
+
+        existing = next((p for p in possible_paths if p.exists()), None)
+        if existing and not force:
+            info(f"gentle-ai already installed at {existing}, skipping")
+            return {"status": "success", "path": str(existing)}
+
         # Run the official installer
         result = subprocess.run(
             ["/bin/bash", "-c",
-             f'curl -fsSL {GENTLE_AI_INSTALL_URL} | sh'],
+             f'curl -fsSL {GENTLE_AI_INSTALL_URL} | sh -s -- --verbose'],
             capture_output=True,
             text=True,
             timeout=180,
         )
-        
+
         if result.returncode != 0:
-            error(f"gentle-ai installation failed: {result.stderr}")
-            return {"status": "failed", "error": result.stderr}
-        
-        # Verify installation
-        if not gentle_ai_path.exists():
-            return {"status": "failed", "error": "gentle-ai binary not found after install"}
-        
-        return {"status": "success"}
-        
+            error(f"gentle-ai installation failed: {result.stderr[-500:]}")
+
+        # Check if installation succeeded by looking for the binary
+        for path in possible_paths:
+            if path.exists():
+                info(f"gentle-ai installed at {path}")
+                return {"status": "success", "path": str(path)}
+
+        # Try to find gentle-ai in PATH
+        which_result = subprocess.run(
+            ["which", "gentle-ai"],
+            capture_output=True,
+            text=True,
+        )
+        if which_result.returncode == 0:
+            path = which_result.stdout.strip()
+            info(f"gentle-ai found in PATH at {path}")
+            return {"status": "success", "path": path}
+
+        error(f"gentle-ai installation failed: binary not found in any expected location")
+        return {"status": "failed", "error": "binary not found after install"}
+
     except subprocess.TimeoutExpired:
         error("gentle-ai installation timed out")
         return {"status": "failed", "error": "timeout"}
+    except Exception as e:
+        error(f"gentle-ai installation failed: {e}")
+        return {"status": "failed", "error": str(e)}
     except Exception as e:
         error(f"gentle-ai installation failed: {e}")
         return {"status": "failed", "error": str(e)}

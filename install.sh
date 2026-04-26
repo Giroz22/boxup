@@ -6,11 +6,15 @@ set -e
 
 echo "[INFO] Boxup bootstrap starting..."
 
-# Check if python3 exists
+# Check if python3 and pip exist
 if ! command -v python3 &> /dev/null; then
     echo "[INFO] Python3 not found, installing..."
     sudo apt update
     sudo apt install -y python3 python3-pip
+elif ! python3 -m pip --version &> /dev/null; then
+    echo "[INFO] pip not found, installing..."
+    sudo apt update
+    sudo apt install -y python3-pip
 fi
 
 # Verify python3 version >= 3.10

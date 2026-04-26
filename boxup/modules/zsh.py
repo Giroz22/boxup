@@ -105,9 +105,10 @@ def install(force: bool = False) -> bool:
                 capture_output=True,
                 timeout=120,
             )
-            # Install fzf
+            # Install fzf (use bash to expand ~)
+            info("Running fzf install...")
             subprocess.run(
-                ["~/.fzf/install", "--all", "--no-bash", "--no-fish"],
+                ["/bin/bash", "-c", f"{fzf_dir}/install --all --no-bash --no-fish"],
                 check=True,
                 capture_output=True,
                 timeout=120,

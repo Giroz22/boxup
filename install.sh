@@ -2,6 +2,18 @@
 # Boxup - Terminal Development Environment Bootstrap
 # Minimal bash bootstrap that ensures python3 is installed
 
+# IMPORTANT: Do NOT run as root. Boxup will prompt for sudo when needed.
+if [ "$EUID" -eq 0 ]; then
+    echo "[ERR] Do NOT run boxup as root!"
+    echo ""
+    echo "Boxup will ask for sudo password when it needs to install"
+    echo "system packages (zsh, tmux, docker, etc.)"
+    echo ""
+    echo "Run without sudo:"
+    echo "    ./install.sh"
+    exit 1
+fi
+
 BOXUP_DIR="${HOME}/.local/boxup"
 BOXUP_VENV="${BOXUP_DIR}/venv"
 

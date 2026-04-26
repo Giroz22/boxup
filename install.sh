@@ -4,37 +4,17 @@
 
 set -e
 
+BOXUP_DIR="${HOME}/.local/boxup"
+BOXUP_VENV="${BOXUP_DIR}/venv"
+BOXUP_BIN="${BOXUP_DIR}/bin"
+
 echo "[INFO] Boxup bootstrap starting..."
 
-# Check if python3 and pip exist
+# Check if python3 exists
 if ! command -v python3 &> /dev/null; then
-    echo "[INFO] Python3 not found, installing..."
-    sudo apt update
-    sudo apt install -y python3 python3-pip
-elif ! python3 -m pip --version &> /dev/null; then
-    echo "[INFO] pip not found, installing..."
-    
-    GET_PIP_URL="https://bootstrap.pypa.io/get-pip.py"
-    PIP_SCRIPT="/tmp/get-pip.py"
-    DOWNLOADED=false
-    
-    # Try wget first, then curl
-    if command -v wget &> /dev/null; then
-        wget "$GET_PIP_URL" -O "$PIP_SCRIPT" && DOWNLOADED=true
-    elif command -v curl &> /dev/null; then
-        curl -fsSL "$GET_PIP_URL" -o "$PIP_SCRIPT" && DOWNLOADED=true
-    else
-        echo "[ERR] Neither wget nor curl found. Cannot install pip."
-        exit 1
-    fi
-    
-    if [ "$DOWNLOADED" = true ] && [ -f "$PIP_SCRIPT" ] && [ -s "$PIP_SCRIPT" ]; then
-        echo "[INFO] Running get-pip.py..."
-        python3 "$PIP_SCRIPT" --user && rm -f "$PIP_SCRIPT"
-    else
-        echo "[ERR] Failed to download get-pip.py"
-        exit 1
-    fi
+    echo "[ERR] Python3 not found. Please install Python 3.10+ first."
+    echo "      Ubuntu/Debian: sudo apt install python3"
+    exit 1
 fi
 
 # Verify python3 version >= 3.10
@@ -49,10 +29,29 @@ fi
 
 echo "[OK] Python $PYTHON_VERSION detected"
 
-# Install boxup package in development mode
-echo "[INFO] Installing boxup..."
-python3 -m pip install -e . --quiet
+# Create boxup directory and venv if needed
+if [ ! -d "$BOXUP_VENV" ]; then
+    echo "[INFO] Creating boxup environment..."
+    mkdir -p "$BOXUP_DIR"
+    python3 -m venv "$BOXUP_VENV"
+fi
 
-# Run boxup
+# Activate venv and install boxup
+echo "[INFO] Installing boxup..."
+source "${BOXUP_VENV}/bin/activate"
+pip install --upgrade pip -q
+pip install -e . -q
+
+# Create wrapper script if not exists or outdated
+WRAPPER="${HOME}/.local/bin/boxup"
+mkdir -p "${HOME}/.local/bin"
+cat > "$WRAPPER" << 'WRAPPER_EOF'
+#!/bin/bash
+source "${HOME}/.local/boxup/venv/bin/activate"
+exec python3 -m boxup "$@"
+WRAPPER_EOF
+chmod +x "$WRAPPER"
+
+# Run boxup with the wrapper
 echo "[INFO] Launching boxup..."
-python3 -m boxup "$@"
+exec "$WRAPPER" "$@"
